@@ -85,7 +85,8 @@ impl SumTree {
                 cumsum = cumsum - self.tree[left];
             }
         }
-        let leaf_num = std::cmp::min(idx - self.first_leaf, self.num_items);
+        // Can only return the highest leaf (num_items - 1)
+        let leaf_num = std::cmp::min(idx - self.first_leaf, self.num_items - 1);
         let value = self.tree[idx];
         (leaf_num, value)
     }
@@ -148,6 +149,9 @@ mod tests {
             assert_eq!(value, 20.);
             assert_eq!(index, i);
         }
+        let (index, value) = st.get(80.);
+        assert_eq!(value, 20.);
+        assert_eq!(index, 3);
     }
 
 
@@ -173,5 +177,27 @@ mod tests {
         let (index, value) = st.get(-100000.);
         assert_eq!(value, 20.);
         assert_eq!(index, 0);
+    }
+
+    #[test]
+    fn sumtree_get_plenty(){
+        use rand::random;
+        let mut st = SumTree::new(50_000);
+        for _ in 0..10000000 {
+            st.add(random());
+            let cumsum: f32 = random::<f32>() * st.total();
+            let (index, _) = st.get(cumsum);
+            assert!(index < st.num_items);
+            assert!(index < 50_000);
+        }
+    }
+
+    #[test]
+    fn sumtree_get_exactly_tree_value(){
+        use rand::random;
+        let mut st = SumTree::new(50_000);
+        for _ in 0..100000 {
+            st.add(random());
+        }
     }
 }
