@@ -15,7 +15,9 @@ pub struct SumTree {
     /// The maximal number of items (leaves) in the tree
     capacity: usize,
     /// First leaf index
-    first_leaf: usize
+    first_leaf: usize,
+    /// Next index to write
+    write_index: usize
 }
 
 
@@ -29,7 +31,8 @@ impl SumTree {
             tree: vec![0f32; num_nodes],
             num_items: 0,
             first_leaf: capacity - 1,
-            capacity
+            capacity,
+            write_index: 0
         }
     }
 
@@ -54,7 +57,8 @@ impl SumTree {
     }
 
     pub fn add(&mut self, value: f32) {
-        self.update(self.num_items % self.capacity, value);
+        self.update(self.write_index, value);
+        self.write_index = (self.write_index + 1) % self.capacity;
         self.num_items = std::cmp::min(self.capacity, self.num_items + 1)
     }
 
@@ -76,7 +80,7 @@ impl SumTree {
         let mut idx = 0;
         while idx < self.first_leaf {
             let left = 2 * idx + 1;
-            if cumsum < self.tree[left]{
+            if cumsum <= self.tree[left]{
                 // Left child
                 idx = left;
             } else {
@@ -183,7 +187,7 @@ mod tests {
     fn sumtree_get_plenty(){
         use rand::random;
         let mut st = SumTree::new(50_000);
-        for _ in 0..10000000 {
+        for _ in 0..1_000_000 {
             st.add(random());
             let cumsum: f32 = random::<f32>() * st.total();
             let (index, _) = st.get(cumsum);

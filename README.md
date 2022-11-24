@@ -33,3 +33,8 @@ source venv/bin/activate
 pip install maturin
 maturin develop --release
 ```
+
+## Bulding the package for release
+```bash
+maturin build --release
+```
