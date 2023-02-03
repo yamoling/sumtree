@@ -1,7 +1,7 @@
 [package]
 name = "sumtree"
 authors = ["Yannick Molinghen <yannick.molinghen@ulb.be>"]
-version = "0.1.7"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/yamoling/sumtree"
 
@@ -10,6 +10,7 @@ repository = "https://github.com/yamoling/sumtree"
 
 [dependencies]
 pyo3 = { version = "0.18", features = ["extension-module"] }
+rand = "0.8"
 
 [dev-dependencies]
 rand= "*"

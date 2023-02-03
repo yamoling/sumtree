@@ -1,5 +1,5 @@
 """This file contains the SumTree class definition"""
-from typing import Tuple
+from typing import Tuple, List
 
 
 class SumTree:
@@ -20,6 +20,23 @@ class SumTree:
 
     def update(self, leaf_num: int, value: float):
         """Update the value of the leaf with a new value"""
+
+    def sample(self, n_samples: int) -> Tuple[List[int], List[float]]:
+        """
+        Randomly sample `n_samples` leaves.
+
+        Every leaf has a probability proportional to its value to be sampled.
+        The same leaf could be sampled multiple times.
+        """
+
+    def sample_batched(self, n_samples: int) -> Tuple[List[int], List[float]]:
+        """
+        Sample from the tree by splitting the tree value into `n_samples` batches.
+        
+        E.g: if tree.total is 60 and n = 3, one leaf will be selected in
+        [0, 20), one in [20, 40) and one in [40, 60)
+        """
+    
 
     @property
     def total(self) -> float:

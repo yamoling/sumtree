@@ -1,6 +1,5 @@
 use pyo3::prelude::{pymodule, pyclass, pymethods, Python, PyResult, PyModule};
 
-
 #[pyclass]
 /// SumTree class
 /// A SumTree is a binary tree in which the value of a node is the sum of its direct children.
@@ -52,10 +51,6 @@ impl SumTree {
         return index >= self.n_leaves - 1;
     }
 
-    pub fn __len__(&self) -> usize {
-        self.num_items
-    }
-
     pub fn add(&mut self, value: f32) {
         self.update(self.write_index, value);
         self.write_index = (self.write_index + 1) % self.capacity;
@@ -64,7 +59,7 @@ impl SumTree {
 
     /// Update the SumTree by changing a leaf value.
     /// The change is propagated up to the root.
-    fn update(&mut self, leaf_num: usize, value: f32) {
+    pub fn update(&mut self, leaf_num: usize, value: f32) {
         let mut index = leaf_num + self.n_leaves - 1;
         let delta = value - self.tree[index];
         while index > 0 {
@@ -93,6 +88,64 @@ impl SumTree {
         let leaf_num = std::cmp::min(idx - self.first_leaf, self.num_items - 1);
         let value = self.tree[idx];
         (leaf_num, value)
+    }
+
+    /// Randomly sample `n_samples` leaves. Every leaf has a probability proportional
+    /// to its value to be sampled.
+    /// The same leaf could be sampled multiple times.
+    pub fn sample(&self, n_samples: usize) -> (Vec<usize>, Vec<f32>) {
+        let total = self.total();
+        let mut indices = vec![];
+        let mut values = vec![];
+        for _ in 0..n_samples {
+            let (index, value) = self.get(rand::random::<f32>() * total);
+            indices.push(index);
+            values.push(value);
+        }
+        (indices, values)
+    }
+
+    /// Sample from the tree by splitting the tree value into `n_samples` batches.
+    /// If tree.value is 60 and n = 3, one leaf will be selected in
+    /// [0, 20), in [20, 40) and one in [40, 60)
+    pub fn sample_batched(&self, n_samples: usize) -> (Vec<usize>, Vec<f32>) {
+        let batch_size = self.total() / (n_samples as f32);
+        let mut indices = vec![];
+        let mut values = vec![];
+        let mut lower_bound = 0f32;
+        for _ in 0..n_samples {
+            let leaf_value = rand::random::<f32>() * batch_size + lower_bound;
+            let (index, value) = self.get(leaf_value);
+            indices.push(index);
+            values.push(value);
+            lower_bound += batch_size
+        }
+        (indices, values)
+    }
+
+
+    pub fn __len__(&self) -> usize {
+        self.num_items
+    }
+
+    pub fn __getitem__(&self, leaf_num: usize) -> f32 {
+        self.tree[self.first_leaf + leaf_num]
+    }
+
+    pub fn __str__(&self) -> String {
+        // If the float values hold on 6 chars (12.345) + 1 whitespace
+        // Leading '[ ' + trailing ']' = 3 chars
+        let mut res = String::with_capacity(self.n_leaves * 7 + 3);
+        res.push_str("[ ");
+        for i in self.first_leaf..(self.first_leaf + self.num_items) {
+            res.push_str(&format!("{:.3} ", self.tree[i]))
+        }
+        res.push(']');
+        res
+    }
+
+    pub fn __repr__(&self) -> String {
+        self.__str__()
     }
 }
 
@@ -197,11 +250,25 @@ mod tests {
     }
 
     #[test]
-    fn sumtree_get_exactly_tree_value(){
-        use rand::random;
+    fn sumtree_sample() {
         let mut st = SumTree::new(50_000);
-        for _ in 0..100000 {
-            st.add(random());
+        for _ in 0..10 {
+            st.add(1.);
+        }
+        let (indices, _) = st.sample(20);
+        assert!(indices.len() == 20)
+    }
+
+    #[test]
+    fn sumtree_sample_batched() {
+        let mut st = SumTree::new(50_000);
+        for _ in 0..10 {
+            st.add(1.);
+        }
+        let (indices, _) = st.sample_batched(20);
+        for (i, tree_idx) in indices.iter().enumerate() {
+            assert!(2 * tree_idx <= i)
         }
     }
+    
 }
