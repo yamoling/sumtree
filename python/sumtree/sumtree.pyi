@@ -18,6 +18,9 @@ class SumTree:
     def get(self, cumsum: float) -> Tuple[int, float]:
         """Retrieve the index and the value of the leaf corresponding to the given sumlative tum"""
 
+    def update(self, leaf_num: int, value: float):
+        """Update the value of the leaf with a new value"""
+
     @property
     def total(self) -> float:
         """The total value of the tree, i.e. the cumulative sum of all leaves"""
