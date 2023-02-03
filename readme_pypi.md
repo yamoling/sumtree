@@ -23,6 +23,8 @@ for i in range(1024):
     st.add(i)
 index, value = st.get(500)
 print(index, value)  # 32, 32.0
+
+indices, values = st.sample(10)
 ```
 
 ### Updating data
