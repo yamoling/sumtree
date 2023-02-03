@@ -35,6 +35,10 @@ class SumTree:
         return tree_idx
 
     @property
+    def capacity(self):
+        return self._n_leaves
+
+    @property
     def total(self):
         """Cumulative sum"""
         return self._tree[0]

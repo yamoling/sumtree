@@ -36,7 +36,8 @@ class SumTree:
         E.g: if tree.total is 60 and n = 3, one leaf will be selected in
         [0, 20), one in [20, 40) and one in [40, 60)
         """
-    
+    def seed(self, seed_value: int):
+        """Seed the Random Number Generator for sampling"""
 
     @property
     def total(self) -> float:
