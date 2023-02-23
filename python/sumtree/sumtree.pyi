@@ -38,6 +38,9 @@ class SumTree:
         """
     def seed(self, seed_value: int):
         """Seed the Random Number Generator for sampling"""
+    
+    def __getitem__(self, index: int) -> float:
+        """Retrieve the value of the leaf at the given index"""
 
     @property
     def total(self) -> float:
