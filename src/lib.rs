@@ -1,7 +1,11 @@
-use pyo3::prelude::{pymodule, pyclass, pymethods, Python, PyResult, PyModule};
-use rand::{rngs::StdRng, SeedableRng, Rng};
+use pyo3::{
+    prelude::{pyclass, pymethods, pymodule, PyModule, PyResult, Python},
+    types::PyDict,
+};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 #[pyclass]
+#[derive(Clone)]
 /// SumTree class
 /// A SumTree is a binary tree in which the value of a node is the sum of its direct children.
 /// As such, only leaves retain useful information.
@@ -18,25 +22,23 @@ pub struct SumTree {
     first_leaf: usize,
     /// Next index to write
     write_index: usize,
-    rng: StdRng
+    rng: StdRng,
 }
-
-
 
 #[pymethods]
 impl SumTree {
     #[new]
     pub fn new(capacity: usize) -> Self {
-        let num_nodes = 2 * capacity -1;
+        let num_nodes = 2 * capacity - 1;
 
-        SumTree { 
-            n_leaves: capacity, 
+        SumTree {
+            n_leaves: capacity,
             tree: vec![0f64; num_nodes],
             num_items: 0,
             first_leaf: capacity - 1,
             capacity,
             write_index: 0,
-            rng: StdRng::seed_from_u64(rand::random())
+            rng: StdRng::seed_from_u64(rand::random()),
         }
     }
 
@@ -83,7 +85,7 @@ impl SumTree {
         let mut idx = 0;
         while idx < self.first_leaf {
             let left = 2 * idx + 1;
-            if cumsum <= self.tree[left]{
+            if cumsum <= self.tree[left] {
                 // Left child
                 idx = left;
             } else {
@@ -136,6 +138,9 @@ impl SumTree {
         self.rng = StdRng::seed_from_u64(seed_value);
     }
 
+    pub fn __deepcopy__(&self, _memo: &PyDict) -> Self {
+        self.clone()
+    }
 
     pub fn __len__(&self) -> usize {
         self.num_items
@@ -168,7 +173,6 @@ fn sumtree(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<SumTree>()?;
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -208,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn sumtree_get(){
+    fn sumtree_get() {
         let mut st = SumTree::new(4);
         st.add(20.);
         st.add(20.);
@@ -228,9 +232,8 @@ mod tests {
         assert_eq!(index, 3);
     }
 
-
     #[test]
-    fn sumtree_get_above_cumsum(){
+    fn sumtree_get_above_cumsum() {
         let mut st = SumTree::new(4);
         st.add(20.);
         st.add(20.);
@@ -242,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn sumtree_get_below_min(){
+    fn sumtree_get_below_min() {
         let mut st = SumTree::new(4);
         st.add(20.);
         st.add(20.);
@@ -254,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn sumtree_get_plenty(){
+    fn sumtree_get_plenty() {
         use rand::random;
         let mut st = SumTree::new(50_000);
         for _ in 0..1_000_000 {
@@ -330,6 +333,4 @@ mod tests {
         let (idx2, _) = st2.sample(20);
         assert_ne!(idx1, idx2)
     }
-
-
 }
