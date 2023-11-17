@@ -34,3 +34,6 @@ toml = "^0.10.2"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["python"]
+
+[tool.ruff]
+line-length = 140

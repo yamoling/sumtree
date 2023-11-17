@@ -151,20 +151,20 @@ impl SumTree {
         self.tree[self.first_leaf + leaf_num]
     }
 
-    pub fn __str__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         // If the float values hold on 6 chars (12.345) + 1 whitespace
         // Leading '[ ' + trailing ']' = 3 chars
         let mut res = String::with_capacity(self.n_leaves * 7 + 3);
-        res.push_str("[ ");
+        res.push_str(&format!(
+            "SumTree(capacity={}, total={:.3}, [ ",
+            self.capacity,
+            self.total()
+        ));
         for i in self.first_leaf..(self.first_leaf + self.num_items) {
             res.push_str(&format!("{:.3} ", self.tree[i]))
         }
-        res.push(']');
+        res.push_str("])");
         res
-    }
-
-    pub fn __repr__(&self) -> String {
-        self.__str__()
     }
 
     /// Pickle protocol

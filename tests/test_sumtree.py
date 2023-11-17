@@ -7,14 +7,16 @@ import sumtree as strust
 def test_version():
     # Retrieve the version from the cargo.toml file
     import toml
+
     with open("Cargo.toml", "r") as f:
         cargo = toml.load(f)
     assert cargo["package"]["version"] == strust.__version__
 
+
 def test_basic_sumtree_comparison():
     st1 = stp.SumTree(1000)
     st2 = strust.SumTree(1000)
-    for i in range(10_000):
+    for i in range(100_000):
         r = random.randint(0, 100)
         if i % 500 == 0:
             print(".", end="")
@@ -46,6 +48,7 @@ def test_deepcopy():
 
 def test_pickle():
     import pickle
+
     st = strust.SumTree(1000)
     st.add(42)
 
@@ -54,4 +57,8 @@ def test_pickle():
     assert st.total == st2.total
     assert st.capacity == st2.capacity
 
-    
+
+def test_str():
+    st = strust.SumTree(1000)
+    st.add(42.0)
+    assert str(st) == "SumTree(capacity=1000, total=42.000, [ 42.000 ])"

@@ -1,7 +1,7 @@
 [package]
 name = "sumtree"
 authors = ["Yannick Molinghen <yannick.molinghen@ulb.be>"]
-version = "0.2.4"
+version = "0.2.5"
 edition = "2021"
 repository = "https://github.com/yamoling/sumtree"
 
@@ -18,9 +18,3 @@ rand = "*"
 [lib]
 crate-type = ["cdylib"]
 name = "sumtree"
-
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
-
-[target.aarch64-apple-darwin]
-rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]

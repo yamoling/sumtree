@@ -37,6 +37,9 @@ class SumTree:
         """Seed the Random Number Generator for sampling"""
     def __getitem__(self, index: int) -> float:
         """Retrieve the value of the leaf at the given index"""
+    def __len__(self) -> int: ...
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
     @property
     def total(self) -> float:
         """The total value of the tree, i.e. the cumulative sum of all leaves"""
