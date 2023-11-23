@@ -169,17 +169,12 @@ impl SumTree {
 
     /// Pickle protocol
     pub fn __getstate__(&self) -> PyResult<(Vec<f64>, usize)> {
-        println!(
-            "Get state with tree {:?} and n_items {}",
-            self.tree, self.num_items
-        );
         Ok((self.tree.clone(), self.num_items))
     }
 
     /// Pickle protocol
     pub fn __setstate__(&mut self, state: (Vec<f64>, usize)) -> PyResult<()> {
         let (tree, n_items) = state;
-        println!("Set state with {tree:?} and {n_items}");
         self.tree = tree;
         self.num_items = n_items;
         Ok(())
@@ -187,7 +182,6 @@ impl SumTree {
 
     /// Pickle protocol
     pub fn __getnewargs__(&self) -> PyResult<(usize,)> {
-        println!("Get new args with {}", self.capacity);
         Ok((self.capacity,))
     }
 }
