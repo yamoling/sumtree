@@ -55,10 +55,6 @@ impl SumTree {
         self.capacity
     }
 
-    fn is_leaf(&self, index: usize) -> bool {
-        index >= self.n_leaves - 1
-    }
-
     pub fn add(&mut self, value: f64) {
         self.update(self.write_index, value);
         self.write_index = (self.write_index + 1) % self.capacity;
@@ -75,6 +71,13 @@ impl SumTree {
             index = (index - 1) / 2;
         }
         self.tree[0] += delta;
+    }
+
+    pub fn update_batched(&mut self, leaf_nums: Vec<usize>, values: Vec<f64>) {
+        assert_eq!(leaf_nums.len(), values.len());
+        for (&leaf_num, &value) in leaf_nums.iter().zip(values.iter()) {
+            self.update(leaf_num, value);
+        }
     }
 
     /// Get the leaf number and leaf value that corresponds
