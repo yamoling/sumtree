@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
+
 @dataclass
 class SumTree:
     """
     SumTree, a binary tree data structure where the parent's value is the sum of its children
+    Credits to: https://github.com/Howuhh/prioritized_experience_replay
     """
+
     _n_leaves: int
     """The maximal number of leaves"""
     _tree: List[float]
@@ -15,7 +18,7 @@ class SumTree:
 
     def __init__(self, capacity: int):
         self._n_leaves = capacity
-        self._tree =  [0.] *  (2 * capacity - 1)
+        self._tree = [0.0] * (2 * capacity - 1)
         self._write_index = 0
 
     def _is_leaf(self, idx: int) -> bool:
@@ -75,7 +78,6 @@ class SumTree:
             left = 2 * idx + 1
         leaf_num = idx - self._n_leaves + 1
         return leaf_num, self._tree[idx]
-
 
     def __repr__(self) -> str:
         return f"SumTree (sum = {self.total}, nodes={self._tree})"

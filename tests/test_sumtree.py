@@ -18,8 +18,6 @@ def test_basic_sumtree_comparison():
     st2 = strust.SumTree(1000)
     for i in range(100_000):
         r = random.randint(0, 100)
-        if i % 500 == 0:
-            print(".", end="")
         st1.add(r)
         st2.add(r)
         assert st1.total == st2.total, f"{st1.total}, {st2.total}"
@@ -62,3 +60,33 @@ def test_str():
     st = strust.SumTree(1000)
     st.add(42.0)
     assert str(st) == "SumTree(capacity=1000, total=42.000, [ 42.000 ])"
+
+
+def test_update_batched():
+    st = strust.SumTree(8)
+    for _ in range(8):
+        st.add(1)
+    assert st.total == 8
+    st.update_batched([0, 1, 2, 3], [2, 2, 2, 2])
+    assert st.total == 4 * 2 + 4 * 1
+
+
+def test_indexing():
+    st = strust.SumTree(8)
+    for i in range(8):
+        st.add(i)
+    for i in range(8):
+        assert st[i] == i
+
+
+def test_wrong_indexing():
+    st = strust.SumTree(8)
+    try:
+        st[25]
+    except IndexError:
+        pass
+
+    try:
+        st[-1]
+    except OverflowError:
+        pass
