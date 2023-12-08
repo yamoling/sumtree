@@ -18,6 +18,8 @@ class SumTree:
         """Retrieve the index and the value of the leaf corresponding to the given sumlative tum"""
     def update(self, leaf_num: int, value: float):
         """Update the value of the leaf with a new value"""
+    def update_batched(self, leaf_nums: List[int], values: List[float]):
+        """Update the values of the leaves with new values. The two lists must have the same length"""
     def sample(self, n_samples: int) -> Tuple[List[int], List[float]]:
         """
         Randomly sample `n_samples` leaves.
@@ -33,13 +35,19 @@ class SumTree:
         E.g: if tree.total is 60 and n = 3, one leaf will be selected in
         [0, 20), one in [20, 40) and one in [40, 60)
         """
+        def is_empty(self) -> bool:
+            """Whether the tree is empty"""
     def seed(self, seed_value: int):
         """Seed the Random Number Generator for sampling"""
-    def __getitem__(self, index: int) -> float:
-        """Retrieve the value of the leaf at the given index"""
+    def __getitem__(self, leaf_num: int) -> float:
+        """
+        Retrieve the value of the leaf at the given (positive) index.
+        """
     def __len__(self) -> int: ...
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
+    def __getstate__(self): ...
+    def __setstate__(self, state): ...
     @property
     def total(self) -> float:
         """The total value of the tree, i.e. the cumulative sum of all leaves"""

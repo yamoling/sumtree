@@ -55,10 +55,6 @@ impl SumTree {
         self.capacity
     }
 
-    fn is_leaf(&self, index: usize) -> bool {
-        index >= self.n_leaves - 1
-    }
-
     pub fn add(&mut self, value: f64) {
         self.update(self.write_index, value);
         self.write_index = (self.write_index + 1) % self.capacity;
@@ -77,12 +73,16 @@ impl SumTree {
         self.tree[0] += delta;
     }
 
+    pub fn update_batched(&mut self, leaf_nums: Vec<usize>, values: Vec<f64>) {
+        assert_eq!(leaf_nums.len(), values.len());
+        for (&leaf_num, &value) in leaf_nums.iter().zip(values.iter()) {
+            self.update(leaf_num, value);
+        }
+    }
+
     /// Get the leaf number and leaf value that corresponds
     /// to the given cumulative sum.
     pub fn get(&self, mut cumsum: f64) -> (usize, f64) {
-        if self.num_items == 0 {
-            return (0, 0f64);
-        }
         let mut idx = 0;
         while idx < self.first_leaf {
             let left = 2 * idx + 1;
@@ -96,7 +96,8 @@ impl SumTree {
             }
         }
         // Can only return the highest leaf (num_items - 1)
-        let leaf_num = std::cmp::min(idx - self.first_leaf, self.num_items - 1);
+        let leaf_num = idx - self.first_leaf;
+        // let leaf_num = std::cmp::min(idx - self.first_leaf, self.num_items - 1);
         let value = self.tree[idx];
         (leaf_num, value)
     }
@@ -139,6 +140,10 @@ impl SumTree {
         self.rng = StdRng::seed_from_u64(seed_value);
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.num_items == 0
+    }
+
     pub fn __deepcopy__(&self, _memo: &PyDict) -> Self {
         self.clone()
     }
@@ -147,8 +152,18 @@ impl SumTree {
         self.num_items
     }
 
-    pub fn __getitem__(&self, leaf_num: usize) -> f64 {
-        self.tree[self.first_leaf + leaf_num]
+    pub fn __getitem__(&self, leaf_num: usize) -> PyResult<f64> {
+        if let Some(value) = self.tree.get(leaf_num + self.first_leaf) {
+            return Ok(*value);
+        }
+        Err(pyo3::exceptions::PyIndexError::new_err(format!(
+            "Index out of bounds: trying to access index {} but there are only {} leaves",
+            leaf_num, self.n_leaves
+        )))
+    }
+
+    pub fn __setitem__(&mut self, leaf_num: usize, value: f64) {
+        self.update(leaf_num, value);
     }
 
     pub fn __repr__(&self) -> String {
@@ -219,7 +234,7 @@ mod tests {
     fn sumtree_get_empty() {
         let st = SumTree::new(4);
         let (index, value) = st.get(50.);
-        assert_eq!(index, 0);
+        assert_eq!(index, 3);
         assert_eq!(value, 0.);
     }
 
@@ -344,5 +359,32 @@ mod tests {
         let (idx1, _) = st1.sample(20);
         let (idx2, _) = st2.sample(20);
         assert_ne!(idx1, idx2)
+    }
+
+    #[test]
+    fn test_update_batched() {
+        let mut st = SumTree::new(8);
+        for i in 0..8 {
+            st.add(i as f64);
+        }
+
+        for (i, cumsum) in vec![0, 1, 3, 6, 10, 15, 21, 28].into_iter().enumerate() {
+            let (index, value) = st.get(cumsum as f64);
+            assert_eq!(index, i);
+            assert_eq!(value, i as f64);
+        }
+        let (index, value) = st.get(300f64);
+        assert_eq!(index, 7);
+        assert_eq!(value, 7f64);
+
+        // Update the 4 first leaves the the value 5f64.
+        st.update_batched(Vec::from_iter(0..4), vec![5f64; 4]);
+
+        let expected_leaf_values = [5f64, 5f64, 5f64, 5f64, 4f64, 5f64, 6f64, 7f64];
+        for (i, cumsum) in vec![2, 7, 12, 17, 24, 29, 35, 300].into_iter().enumerate() {
+            let (index, value) = st.get(cumsum as f64);
+            assert_eq!(index, i);
+            assert_eq!(value, expected_leaf_values[i]);
+        }
     }
 }
