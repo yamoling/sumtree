@@ -10,32 +10,58 @@ __all__ = [
 @typing.final
 class SumTree:
     r"""
-    SumTree class
-    A SumTree is a binary tree in which the value of a node is the sum of its direct children.
-    As such, only leaves retain useful information.
+    A SumTree is a binary tree in which each node as a float value. The value of a node is the sum of its direct children, and leaves have their own values. Consequently, the root of the tree contains the total sum of all leaves.
+    
+    A SumTree can efficiently sample items with a probability proportional to their value, while also being efficient to add and remove items from the population. Sampling, adding or removing items is done in O(log(n_leaves)) time.
     """
+    @property
+    def n_leaves(self) -> builtins.int:
+        r"""
+        The number of leaves in the SumTree
+        """
+    @property
+    def num_items(self) -> builtins.int:
+        r"""
+        Number of filled items (effective leaves) in the tree
+        """
+    @property
+    def capacity(self) -> builtins.int:
+        r"""
+        The maximal number of items (leaves) in the tree
+        """
+    @property
+    def first_leaf(self) -> builtins.int:
+        r"""
+        First leaf index
+        """
     @property
     def total(self) -> builtins.float:
         r"""
         The total cumulative sum
         """
     @property
-    def capacity(self) -> builtins.int:
+    def is_empty(self) -> builtins.bool:
         r"""
-        The maximal number of items (leaves) that the tree can store
+        Whether the SumTree is empty (i.e. contains no items).
         """
     def __new__(cls, capacity: builtins.int) -> SumTree: ...
-    def add(self, value: builtins.float) -> None: ...
+    def add(self, value: builtins.float) -> None:
+        r"""
+        Add a new item to the SumTree. If the SumTree is full, the oldest item will be removed and replaced by the new one.
+        """
     def update(self, leaf_num: builtins.int, value: builtins.float) -> None:
         r"""
         Update the SumTree by changing a leaf value.
         The change is propagated up to the root.
         """
-    def update_batched(self, leaf_nums: typing.Sequence[builtins.int], values: typing.Sequence[builtins.float]) -> None: ...
+    def update_batched(self, leaf_nums: typing.Sequence[builtins.int], values: typing.Sequence[builtins.float]) -> None:
+        r"""
+        Update the SumTree by changing multiple leaf values. See `update` for more details.
+        """
     def get(self, cumsum: builtins.float) -> tuple[builtins.int, builtins.float]:
         r"""
-        Get the leaf number and leaf value that corresponds
-        to the given cumulative sum.
+        Get the leaf number and leaf value that corresponds to the given cumulative sum
+        in the order of the leaves.
         """
     def sample(self, n_samples: builtins.int) -> tuple[builtins.list[builtins.int], builtins.list[builtins.float]]:
         r"""
@@ -49,11 +75,17 @@ class SumTree:
         If tree.value is 60 and n = 3, one leaf will be selected in
         [0, 20), in [20, 40) and one in [40, 60)
         """
-    def seed(self, seed_value: builtins.int) -> None: ...
-    def is_empty(self) -> builtins.bool: ...
+    def seed(self, seed: builtins.int) -> None:
+        r"""
+        Seed the random number generator used for sampling.
+        """
     def __deepcopy__(self, _memo: dict) -> SumTree: ...
     def __len__(self) -> builtins.int: ...
-    def __getitem__(self, leaf_num: builtins.int) -> builtins.float: ...
+    def __getitem__(self, leaf_num: builtins.int) -> builtins.float:
+        r"""
+        Retrieve the value of a leaf by its number. The leaf number is between 0 and n_leaves - 1.
+        Raises: `IndexError` if the leaf number is out of bounds.
+        """
     def __setitem__(self, leaf_num: builtins.int, value: builtins.float) -> None: ...
     def __repr__(self) -> builtins.str: ...
     def __getstate__(self) -> tuple[builtins.list[builtins.float], builtins.int]:

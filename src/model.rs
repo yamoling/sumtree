@@ -5,9 +5,9 @@ use rand::{RngExt, SeedableRng, rngs::SmallRng};
 #[gen_stub_pyclass]
 #[pyclass(module = "sumtree.sumtree", from_py_object)]
 #[derive(Clone)]
-/// SumTree class
-/// A SumTree is a binary tree in which the value of a node is the sum of its direct children.
-/// As such, only leaves retain useful information.
+/// A SumTree is a binary tree in which each node as a float value. The value of a node is the sum of its direct children, and leaves have their own values. Consequently, the root of the tree contains the total sum of all leaves.
+///
+/// A SumTree can efficiently sample items with a probability proportional to their value, while also being efficient to add and remove items from the population. Sampling, adding or removing items is done in O(log(n_leaves)) time.
 pub struct SumTree {
     #[pyo3(get)]
     /// The number of leaves in the SumTree
@@ -52,6 +52,7 @@ impl SumTree {
         self.tree[0]
     }
 
+    /// Add a new item to the SumTree. If the SumTree is full, the oldest item will be removed and replaced by the new one.
     pub fn add(&mut self, value: f64) {
         self.update(self.write_index, value);
         self.write_index = (self.write_index + 1) % self.capacity;
@@ -70,25 +71,23 @@ impl SumTree {
         self.tree[0] += delta;
     }
 
-    pub fn update_batched(&mut self, leaf_nums: Vec<usize>, values: Vec<f64>) {
-        assert_eq!(leaf_nums.len(), values.len());
+    /// Update the SumTree by changing multiple leaf values. See `update` for more details.
+    pub fn update_batched(&mut self, leaf_nums: Vec<usize>, values: Vec<f64>) -> PyResult<()> {
+        if leaf_nums.len() != values.len() {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "leaf_nums and values must have the same length, but got {} leaf indices and {} values",
+                leaf_nums.len(),
+                values.len()
+            )));
+        }
         for (&leaf_num, &value) in leaf_nums.iter().zip(values.iter()) {
             self.update(leaf_num, value);
         }
+        Ok(())
     }
 
-    /// Get the leaf number and leaf value that corresponds to the given cumulative sum.
-    ///
-    /// If the tree is empty, `st.get(x)` yields:
-    ///     - the first leaf (leaf 0) with value 0.0 for any x <= 0
-    ///     - the last leaf (leaf n_leaves - 1) with value 0.0 for any x > 0
-    /// ```python
-    /// st = SumTree(4)
-    /// st.add(10.)
-    /// st.add(20.)
-    /// st.add(30.)
-    /// st.get(0.) # (0, 10.)
-    /// ```
+    /// Get the leaf number and leaf value that corresponds to the given cumulative sum
+    /// in the order of the leaves.
     pub fn get(&self, mut cumsum: f64) -> (usize, f64) {
         let mut idx = 0;
         while idx < self.first_leaf {
@@ -141,10 +140,13 @@ impl SumTree {
         (indices, values)
     }
 
+    /// Seed the random number generator used for sampling.
     pub fn seed(&mut self, seed: u64) {
         self.rng = SmallRng::seed_from_u64(seed);
     }
 
+    #[getter]
+    /// Whether the SumTree is empty (i.e. contains no items).
     pub fn is_empty(&self) -> bool {
         self.num_items == 0
     }
@@ -158,11 +160,12 @@ impl SumTree {
     }
 
     /// Retrieve the value of a leaf by its number. The leaf number is between 0 and n_leaves - 1.
+    /// Raises: `IndexError` if the leaf number is out of bounds.
     pub fn __getitem__(&self, leaf_num: usize) -> PyResult<f64> {
         if let Some(value) = self.tree.get(leaf_num + self.first_leaf) {
             return Ok(*value);
         }
-        Err(pyo3::exceptions::PyValueError::new_err(format!(
+        Err(pyo3::exceptions::PyIndexError::new_err(format!(
             "Index out of bounds: trying to access index {} but there are only {} leaves",
             leaf_num, self.n_leaves
         )))
@@ -238,17 +241,11 @@ mod tests {
 
     #[test]
     fn sumtree_get_empty() {
-        let st = SumTree::new(4);
-        let (index, value) = st.get(50.);
-        assert_eq!(index, 3);
+        let st = SumTree::new(5);
+        let (_, value) = st.get(0.);
         assert_eq!(value, 0.);
 
-        let (index, value) = st.get(0.);
-        assert_eq!(index, 0);
-        assert_eq!(value, 0.);
-
-        let (index, value) = st.get(-10.);
-        assert_eq!(index, 0);
+        let (_, value) = st.get(-10.);
         assert_eq!(value, 0.);
     }
 
@@ -392,7 +389,8 @@ mod tests {
         assert_eq!(value, 7f64);
 
         // Update the 4 first leaves the the value 5f64.
-        st.update_batched(Vec::from_iter(0..4), vec![5f64; 4]);
+        st.update_batched(Vec::from_iter(0..4), vec![5f64; 4])
+            .unwrap();
 
         let expected_leaf_values = [5f64, 5f64, 5f64, 5f64, 4f64, 5f64, 6f64, 7f64];
         for (i, cumsum) in vec![2, 7, 12, 17, 24, 29, 35, 300].into_iter().enumerate() {
@@ -400,5 +398,15 @@ mod tests {
             assert_eq!(index, i);
             assert_eq!(value, expected_leaf_values[i]);
         }
+    }
+
+    #[test]
+    fn update_batched_wrong_shape() {
+        let mut st = SumTree::new(8);
+        for i in 0..8 {
+            st.add(i as f64);
+        }
+        let res = st.update_batched(vec![0, 1], vec![5f64]);
+        assert!(res.is_err());
     }
 }

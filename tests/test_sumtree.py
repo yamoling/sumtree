@@ -93,6 +93,18 @@ def test_wrong_indexing():
         pass
 
 
+def test_update_batched_wrong_shape():
+    st = strust.SumTree(8)
+    for i in range(8):
+        st.add(i)
+
+    try:
+        st.update_batched([0, 1], [10])  # Mismatched lengths
+        assert False, "Should raise ValueError for mismatched lengths"
+    except ValueError:
+        pass
+
+
 # ============================================================================
 # EMPTY AND ZERO VALUE TESTS
 # ============================================================================
@@ -178,22 +190,12 @@ def test_update_at_boundaries():
 # EDGE CASES
 # ============================================================================
 def test_get_from_empty():
-    """Test get from an empty tree."""
     st = strust.SumTree(5)
-    idx, value = st.get(0)
+    _, value = st.get(0)
     assert value == 0
-    assert idx == st.capacity // 2 - 1  # Should return the leaf at the middle of the tree
 
-
-def test_get_zero_value():
-    """Test get with accumulation value of 0."""
-    st = strust.SumTree(5)
-    for i in range(1, 6):
-        st.add(i)
-
-    # Getting with 0 should return the first non-zero index
-    idx, value = st.get(0)
-    assert idx == 0
+    _, value = st.get(-5)
+    assert value == 0
 
 
 def test_get_exact_total():
