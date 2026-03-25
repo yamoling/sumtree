@@ -1,31 +1,34 @@
-use pyo3::{
-    prelude::{pyclass, pymethods},
-    types::PyDict,
-    PyResult,
-};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use pyo3::{prelude::*, types::PyDict};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use rand::{RngExt, SeedableRng, rngs::SmallRng};
 
-#[pyclass(module = "sumtree")]
+#[gen_stub_pyclass]
+#[pyclass(module = "sumtree.sumtree", from_py_object)]
 #[derive(Clone)]
 /// SumTree class
 /// A SumTree is a binary tree in which the value of a node is the sum of its direct children.
 /// As such, only leaves retain useful information.
 pub struct SumTree {
+    #[pyo3(get)]
     /// The number of leaves in the SumTree
     n_leaves: usize,
     /// The tree nodes
     tree: Vec<f64>,
-    /// Number of items (leaves) in the tree
+    #[pyo3(get)]
+    /// Number of filled items (effective leaves) in the tree
     num_items: usize,
+    #[pyo3(get)]
     /// The maximal number of items (leaves) in the tree
     capacity: usize,
+    #[pyo3(get)]
     /// First leaf index
     first_leaf: usize,
     /// Next index to write
     write_index: usize,
-    rng: StdRng,
+    rng: SmallRng,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl SumTree {
     #[new]
@@ -39,7 +42,7 @@ impl SumTree {
             first_leaf: capacity - 1,
             capacity,
             write_index: 0,
-            rng: StdRng::seed_from_u64(rand::random()),
+            rng: rand::make_rng(),
         }
     }
 
@@ -47,12 +50,6 @@ impl SumTree {
     #[getter]
     pub fn total(&self) -> f64 {
         self.tree[0]
-    }
-
-    /// The maximal number of items (leaves) that the tree can store
-    #[getter]
-    pub fn capacity(&self) -> usize {
-        self.capacity
     }
 
     pub fn add(&mut self, value: f64) {
@@ -80,8 +77,18 @@ impl SumTree {
         }
     }
 
-    /// Get the leaf number and leaf value that corresponds
-    /// to the given cumulative sum.
+    /// Get the leaf number and leaf value that corresponds to the given cumulative sum.
+    ///
+    /// If the tree is empty, `st.get(x)` yields:
+    ///     - the first leaf (leaf 0) with value 0.0 for any x <= 0
+    ///     - the last leaf (leaf n_leaves - 1) with value 0.0 for any x > 0
+    /// ```python
+    /// st = SumTree(4)
+    /// st.add(10.)
+    /// st.add(20.)
+    /// st.add(30.)
+    /// st.get(0.) # (0, 10.)
+    /// ```
     pub fn get(&self, mut cumsum: f64) -> (usize, f64) {
         let mut idx = 0;
         while idx < self.first_leaf {
@@ -95,9 +102,7 @@ impl SumTree {
                 cumsum -= self.tree[left];
             }
         }
-        // Can only return the highest leaf (num_items - 1)
         let leaf_num = idx - self.first_leaf;
-        // let leaf_num = std::cmp::min(idx - self.first_leaf, self.num_items - 1);
         let value = self.tree[idx];
         (leaf_num, value)
     }
@@ -110,7 +115,7 @@ impl SumTree {
         let mut indices = vec![];
         let mut values = vec![];
         for _ in 0..n_samples {
-            let cumsum = self.rng.gen::<f64>() * total;
+            let cumsum = self.rng.random::<f64>() * total;
             let (index, value) = self.get(cumsum);
             indices.push(index);
             values.push(value);
@@ -127,7 +132,7 @@ impl SumTree {
         let mut values = vec![];
         let mut lower_bound = 0f64;
         for _ in 0..n_samples {
-            let leaf_value = self.rng.gen::<f64>() * batch_size + lower_bound;
+            let leaf_value = self.rng.random::<f64>() * batch_size + lower_bound;
             let (index, value) = self.get(leaf_value);
             indices.push(index);
             values.push(value);
@@ -136,15 +141,15 @@ impl SumTree {
         (indices, values)
     }
 
-    pub fn seed(&mut self, seed_value: u64) {
-        self.rng = StdRng::seed_from_u64(seed_value);
+    pub fn seed(&mut self, seed: u64) {
+        self.rng = SmallRng::seed_from_u64(seed);
     }
 
     pub fn is_empty(&self) -> bool {
         self.num_items == 0
     }
 
-    pub fn __deepcopy__(&self, _memo: &PyDict) -> Self {
+    pub fn __deepcopy__(&self, _memo: &Bound<'_, PyDict>) -> Self {
         self.clone()
     }
 
@@ -152,11 +157,12 @@ impl SumTree {
         self.num_items
     }
 
+    /// Retrieve the value of a leaf by its number. The leaf number is between 0 and n_leaves - 1.
     pub fn __getitem__(&self, leaf_num: usize) -> PyResult<f64> {
         if let Some(value) = self.tree.get(leaf_num + self.first_leaf) {
             return Ok(*value);
         }
-        Err(pyo3::exceptions::PyIndexError::new_err(format!(
+        Err(pyo3::exceptions::PyValueError::new_err(format!(
             "Index out of bounds: trying to access index {} but there are only {} leaves",
             leaf_num, self.n_leaves
         )))
@@ -211,7 +217,7 @@ mod tests {
         assert_eq!(st.n_leaves, 8);
         assert_eq!(st.total(), 0.);
         assert_eq!(st.num_items, 0);
-        assert_eq!(st.capacity(), 8);
+        assert_eq!(st.capacity, 8);
     }
 
     #[test]
@@ -235,6 +241,14 @@ mod tests {
         let st = SumTree::new(4);
         let (index, value) = st.get(50.);
         assert_eq!(index, 3);
+        assert_eq!(value, 0.);
+
+        let (index, value) = st.get(0.);
+        assert_eq!(index, 0);
+        assert_eq!(value, 0.);
+
+        let (index, value) = st.get(-10.);
+        assert_eq!(index, 0);
         assert_eq!(value, 0.);
     }
 
