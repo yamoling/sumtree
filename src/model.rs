@@ -12,9 +12,8 @@ use rand::{RngExt, SeedableRng, rngs::SmallRng};
 /// `[sum(w_0..w_i), sum(w_0..=w_i))`, of width `w_i`. Looking up a cumulative value
 /// in `[0, total)` selects the leaf whose interval contains it. For example, weights
 /// `[0, 2, 3]` correspond to `[0, 0)`, `[0, 2)`, and `[2, 5)`: a zero-weight leaf
-/// owns no values and should never be sampled. The current `get` implementation
-/// still assigns exact boundaries to the preceding leaf, including `0` to a
-/// zero-weight leaf; this boundary behavior is not yet fixed.
+/// owns no values and should never be sampled. At a shared boundary, the
+/// value belongs to the interval on the right.
 ///
 /// Sampling is proportional to leaf weights; adding, updating, and looking up a
 /// leaf take O(log(n_leaves)) time.
@@ -99,13 +98,20 @@ impl SumTree {
     }
 
     /// Get the leaf number and leaf value that corresponds to the given cumulative sum
-    /// in the order of the leaves.
+    /// in the order of the leaves. Values at or above the total select the last
+    /// positive-weight leaf when the total is positive.
     pub fn get(&self, mut cumsum: f64) -> (usize, f64) {
-        cumsum = cumsum.min(self.total());
+        let total = self.total();
+        if total == 0.0 {
+            return (0, self.tree[self.first_leaf]);
+        }
+        if cumsum >= total {
+            cumsum = total.next_down();
+        }
         let mut idx = 0;
         while idx < self.first_leaf {
             let left = 2 * idx + 1;
-            if cumsum <= self.tree[left] {
+            if cumsum < self.tree[left] {
                 // Left child
                 idx = left;
             } else {
@@ -274,11 +280,7 @@ mod tests {
         for (i, cumsum) in (0..80).step_by(20).enumerate() {
             let (index, value) = st.get(cumsum as f64);
             assert_eq!(value, 20.);
-            if i == 0 {
-                assert_eq!(index, 0);
-            } else {
-                assert_eq!(index, i - 1);
-            }
+            assert_eq!(index, i);
         }
         let (index, value) = st.get(80.);
         assert_eq!(value, 20.);
@@ -394,10 +396,14 @@ mod tests {
             st.add(i as f64);
         }
 
-        for (i, cumsum) in vec![0, 1, 3, 6, 10, 15, 21, 28].into_iter().enumerate() {
-            let (index, value) = st.get(cumsum as f64);
-            assert_eq!(index, i);
-            assert_eq!(value, i as f64);
+        assert_eq!(st.get(0.), (1, 1.));
+        for (i, cumsum) in [0.5, 1.5, 3.5, 6.5, 10.5, 15.5, 21.5]
+            .into_iter()
+            .enumerate()
+        {
+            let (index, value) = st.get(cumsum);
+            assert_eq!(index, i + 1);
+            assert_eq!(value, (i + 1) as f64);
         }
         let (index, value) = st.get(300f64);
         assert_eq!(index, 7);
@@ -408,7 +414,7 @@ mod tests {
             .unwrap();
 
         let expected_leaf_values = [5f64, 5f64, 5f64, 5f64, 4f64, 5f64, 6f64, 7f64];
-        for (i, cumsum) in vec![2, 7, 12, 17, 24, 29, 35, 300].into_iter().enumerate() {
+        for (i, cumsum) in [2, 7, 12, 17, 22, 26, 32, 300].into_iter().enumerate() {
             let (index, value) = st.get(cumsum as f64);
             assert_eq!(index, i);
             assert_eq!(value, expected_leaf_values[i]);

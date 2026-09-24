@@ -24,10 +24,12 @@ def test_basic_sumtree_comparison():
         st2.add(r)
         assert st1.total == st2.total, f"{st1.total}, {st2.total}"
 
-        to_get = random.randint(0, int(st2.total))
-        g1 = st1.get(to_get)
-        g2 = st2.get(to_get)
-        assert g1 == g2, f"i={i}\t{g1} != {g2}"
+        if st2.total > 0:
+            # The reference assigns exact boundaries to the preceding leaf.
+            to_get = random.randint(0, int(st2.total) - 1) + 0.5
+            g1 = st1.get(to_get)
+            g2 = st2.get(to_get)
+            assert g1 == g2, f"i={i}\t{g1} != {g2}"
 
         new_value = random.randint(0, 1000)
         st1.update(i % st1.capacity, new_value)
@@ -246,6 +248,18 @@ def test_get_skips_zero_weight_leaf_at_zero_cumsum():
     st.add(5)
 
     assert st.get(0) == (1, 5)
+
+
+def test_get_assigns_boundaries_to_next_positive_weight_leaf():
+    st = strust.SumTree(5)
+    for weight in [1, 0, 0, 2, 0]:
+        st.add(weight)
+
+    assert st.get(0) == (0, 1)
+    assert st.get(1) == (3, 2)
+    assert st.get(2) == (3, 2)
+    assert st.get(st.total) == (3, 2)
+    assert st.get(100) == (3, 2)
 
 
 def test_get_exact_total():
