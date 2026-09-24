@@ -15,8 +15,9 @@ def test_version():
 
 
 def test_basic_sumtree_comparison():
-    st1 = stp.SumTree(1000)
-    st2 = strust.SumTree(1000)
+    # The reference uses heap order for non-power-of-two capacities.
+    st1 = stp.SumTree(1024)
+    st2 = strust.SumTree(1024)
     for i in range(100_000):
         r = random.randint(0, 100)
         st1.add(r)
@@ -55,6 +56,32 @@ def test_pickle():
     st2 = pickle.loads(serialized)
     assert st.total == st2.total
     assert st.capacity == st2.capacity
+
+
+def test_pickle_preserves_next_add_position():
+    import pickle
+
+    st = strust.SumTree(4)
+    st.add(1)
+    st.add(2)
+    restored = pickle.loads(pickle.dumps(st))
+
+    restored.add(3)
+    assert [restored[i] for i in range(4)] == [1, 2, 3, 0]
+    assert restored.total == 6
+
+
+def test_pickle_preserves_next_add_position_after_wraparound():
+    import pickle
+
+    st = strust.SumTree(4)
+    for value in [1, 2, 3, 4, 5]:
+        st.add(value)
+    restored = pickle.loads(pickle.dumps(st))
+
+    restored.add(6)
+    assert [restored[i] for i in range(4)] == [5, 6, 3, 4]
+    assert restored.total == 18
 
 
 def test_str():
@@ -198,15 +225,36 @@ def test_get_from_empty():
     assert value == 0
 
 
+def test_get_uses_leaf_order_at_non_power_of_two_capacity():
+    st = strust.SumTree(5)
+    for weight in [1.0, 2.0, 3.0, 4.0, 5.0]:
+        st.add(weight)
+
+    assert [st.get(cumsum) for cumsum in [0, 1.5, 3.5, 6.5, 10.5]] == [
+        (0, 1.0),
+        (1, 2.0),
+        (2, 3.0),
+        (3, 4.0),
+        (4, 5.0),
+    ]
+    assert st.get(100) == (4, 5.0)
+
+
+def test_get_skips_zero_weight_leaf_at_zero_cumsum():
+    st = strust.SumTree(2)
+    st.add(0)
+    st.add(5)
+
+    assert st.get(0) == (1, 5)
+
+
 def test_get_exact_total():
     """Test get with value equal to total."""
     st = strust.SumTree(5)
     for i in range(1, 6):
         st.add(i)
 
-    total = st.total
-    idx, _ = st.get(total)
-    assert idx < len(st) - 1
+    assert st.get(st.total) == (4, 5)
 
 
 def test_get_distribution_correctness():

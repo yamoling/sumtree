@@ -1,6 +1,6 @@
 [package]
 name = "sumtree"
-version = "0.2.9"
+version = "0.3.0"
 edition = "2024"
 repository = "https://github.com/yamoling/sumtree"
 
@@ -12,6 +12,6 @@ name = "sumtree"
 path = "src/lib.rs"
 
 [dependencies]
-pyo3 = { version = "0.28.0", features = ["generate-import-lib"] }
-pyo3-stub-gen = "0.20.0"
+pyo3 = { version = "0.29", features = ["generate-import-lib"] }
+pyo3-stub-gen = "0.23"
 rand = "0.10"

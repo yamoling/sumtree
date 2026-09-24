@@ -5,9 +5,19 @@ use rand::{RngExt, SeedableRng, rngs::SmallRng};
 #[gen_stub_pyclass]
 #[pyclass(module = "sumtree.sumtree", from_py_object)]
 #[derive(Clone)]
-/// A SumTree is a binary tree in which each node as a float value. The value of a node is the sum of its direct children, and leaves have their own values. Consequently, the root of the tree contains the total sum of all leaves.
+/// A SumTree is a binary tree whose leaves hold weights and whose internal nodes hold
+/// the sums of their children. The root holds the total weight.
 ///
-/// A SumTree can efficiently sample items with a probability proportional to their value, while also being efficient to add and remove items from the population. Sampling, adding or removing items is done in O(log(n_leaves)) time.
+/// Conceptually, leaf `i` with weight `w_i` owns the half-open cumulative interval
+/// `[sum(w_0..w_i), sum(w_0..=w_i))`, of width `w_i`. Looking up a cumulative value
+/// in `[0, total)` selects the leaf whose interval contains it. For example, weights
+/// `[0, 2, 3]` correspond to `[0, 0)`, `[0, 2)`, and `[2, 5)`: a zero-weight leaf
+/// owns no values and should never be sampled. The current `get` implementation
+/// still assigns exact boundaries to the preceding leaf, including `0` to a
+/// zero-weight leaf; this boundary behavior is not yet fixed.
+///
+/// Sampling is proportional to leaf weights; adding, updating, and looking up a
+/// leaf take O(log(n_leaves)) time.
 pub struct SumTree {
     #[pyo3(get)]
     /// The number of leaves in the SumTree
@@ -33,13 +43,14 @@ pub struct SumTree {
 impl SumTree {
     #[new]
     pub fn new(capacity: usize) -> Self {
-        let num_nodes = 2 * capacity - 1;
+        let padded_leaves = capacity.next_power_of_two();
+        let num_nodes = 2 * padded_leaves - 1;
 
         SumTree {
             n_leaves: capacity,
             tree: vec![0f64; num_nodes],
             num_items: 0,
-            first_leaf: capacity - 1,
+            first_leaf: padded_leaves - 1,
             capacity,
             write_index: 0,
             rng: rand::make_rng(),
@@ -62,7 +73,8 @@ impl SumTree {
     /// Update the SumTree by changing a leaf value.
     /// The change is propagated up to the root.
     pub fn update(&mut self, leaf_num: usize, value: f64) {
-        let mut index = leaf_num + self.n_leaves - 1;
+        assert!(leaf_num < self.capacity, "leaf index out of bounds");
+        let mut index = leaf_num + self.first_leaf;
         let delta = value - self.tree[index];
         while index > 0 {
             self.tree[index] += delta;
@@ -89,6 +101,7 @@ impl SumTree {
     /// Get the leaf number and leaf value that corresponds to the given cumulative sum
     /// in the order of the leaves.
     pub fn get(&self, mut cumsum: f64) -> (usize, f64) {
+        cumsum = cumsum.min(self.total());
         let mut idx = 0;
         while idx < self.first_leaf {
             let left = 2 * idx + 1;
@@ -162,8 +175,9 @@ impl SumTree {
     /// Retrieve the value of a leaf by its number. The leaf number is between 0 and n_leaves - 1.
     /// Raises: `IndexError` if the leaf number is out of bounds.
     pub fn __getitem__(&self, leaf_num: usize) -> PyResult<f64> {
-        if let Some(value) = self.tree.get(leaf_num + self.first_leaf) {
-            return Ok(*value);
+        if leaf_num < self.capacity {
+            let value = self.tree[leaf_num + self.first_leaf];
+            return Ok(value);
         }
         Err(pyo3::exceptions::PyIndexError::new_err(format!(
             "Index out of bounds: trying to access index {} but there are only {} leaves",
@@ -192,15 +206,16 @@ impl SumTree {
     }
 
     /// Pickle protocol
-    pub fn __getstate__(&self) -> PyResult<(Vec<f64>, usize)> {
-        Ok((self.tree.clone(), self.num_items))
+    pub fn __getstate__(&self) -> PyResult<(Vec<f64>, usize, usize)> {
+        Ok((self.tree.clone(), self.num_items, self.write_index))
     }
 
     /// Pickle protocol
-    pub fn __setstate__(&mut self, state: (Vec<f64>, usize)) -> PyResult<()> {
-        let (tree, n_items) = state;
+    pub fn __setstate__(&mut self, state: (Vec<f64>, usize, usize)) -> PyResult<()> {
+        let (tree, n_items, write_index) = state;
         self.tree = tree;
         self.num_items = n_items;
+        self.write_index = write_index;
         Ok(())
     }
 
